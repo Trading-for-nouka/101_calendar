@@ -1,0 +1,20 @@
+name: Daily Stock Event Notifier
+
+on:
+  repository_dispatch:
+    types: [remote_notify]
+  workflow_dispatch:
+
+jobs:
+  notify:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.10'
+      - run: pip install requests
+      - name: Run notification script
+        env:
+          DISCORD_WEBHOOK: ${{ secrets.DISCORD_WEBHOOK }}
+        run: python notify.py
