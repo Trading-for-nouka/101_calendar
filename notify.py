@@ -104,7 +104,7 @@ def main():
     event = ECONOMIC_EVENTS.get(tomorrow_str)
     
     if event:
-        msg = f"🔔 **【明日】の経済イベント予定** ({tomorrow_str})\n---------------------------\n{event}"
+        msg = f"[101_calendar] 🔔 **【明日】の経済イベント予定** ({tomorrow_str})\n---------------------------\n{event}"
     else:
         # 明日の予定がない場合
         msg = f"[101_calendar] 📅 {tomorrow_str}：明日の主要な予定はありません。"
