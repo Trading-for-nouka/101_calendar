@@ -107,7 +107,7 @@ def main():
         msg = f"🔔 **【明日】の経済イベント予定** ({tomorrow_str})\n---------------------------\n{event}"
     else:
         # 明日の予定がない場合
-        msg = f"📅 {tomorrow_str}：明日の主要な予定はありません。"
+        msg = f"[101_calendar] 📅 {tomorrow_str}：明日の主要な予定はありません。"
 
     if DISCORD_WEBHOOK:
         send_discord_notification(msg)
