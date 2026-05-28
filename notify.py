@@ -1,6 +1,8 @@
 import os
+import csv
 import requests
 from datetime import datetime, timedelta, timezone
+from pathlib import Path
 
 # 環境変数からWebhook URLを取得
 DISCORD_WEBHOOK = os.getenv("DISCORD_WEBHOOK")
@@ -8,85 +10,32 @@ DISCORD_WEBHOOK = os.getenv("DISCORD_WEBHOOK")
 # 日本標準時 (JST) の設定
 JST = timezone(timedelta(hours=+9), 'JST')
 
-# 2026年の主要イベントスケジュール
-ECONOMIC_EVENTS = {
-    # --- 1月 ---
-    "2026-01-01": "🇯🇵 元日 (休場)",
-    "2026-01-02": "🇯🇵 年始休業 (休場)",
-    "2026-01-05": "🇯🇵 大発会 / 🇺🇸 米雇用統計 (12月分)",
-    "2026-01-12": "🇯🇵 成人の日 (休場)",
-    "2026-01-13": "🇺🇸 米消費者物価指数 (CPI)",
-    "2026-01-21": "🇯🇵 日銀政策金利発表 / 展望レポート",
-    "2026-01-28": "🇺🇸 FOMC政策金利発表 (2:00)",
-    # --- 2月 ---
-    "2026-02-06": "🇺🇸 米雇用統計 (1月分)",
-    "2026-02-11": "🇯🇵 建国記念の日 (休場)",
-    "2026-02-12": "🇺🇸 米消費者物価指数 (CPI)",
-    "2026-02-23": "🇯🇵 天皇誕生日 (休場)",
-    "2026-02-24": "🇯🇵 振替休日 (休場)",
-    # --- 3月 ---
-    "2026-03-06": "🇺🇸 米雇用統計 (2月分)",
-    "2026-03-12": "🇺🇸 米消費者物価指数 (CPI)",
-    "2026-03-13": "🇯🇵 メジャーSQ (3月限)",
-    "2026-03-18": "🇺🇸 FOMC政策金利発表 (2:00)",
-    "2026-03-20": "🇯🇵 春分の日 (休場)",
-    "2026-03-26": "🇯🇵 3月期末 権利付き最終日",
-    "2026-03-27": "🇯🇵 3月期末 権利落ち日",
-    "2026-03-31": "🇯🇵 3月期末 権利確定日",
-    # --- 4月 ---
-    "2026-04-03": "🇺🇸 米雇用統計 (3月分)",
-    "2026-04-14": "🇺🇸 米消費者物価指数 (CPI)",
-    "2026-04-29": "🇯🇵 昭和の日 (休場)",
-    "2026-04-30": "🇺🇸 FOMC政策金利発表 (2:00)",
-    # --- 5月 ---
-    "2026-05-04": "🇯🇵 みどりの日 (休場)",
-    "2026-05-05": "🇯🇵 こどもの日 (休場)",
-    "2026-05-06": "🇯🇵 振替休日 (休場)",
-    "2026-05-08": "🇺🇸 米雇用統計 (4月分)",
-    "2026-05-13": "🇺🇸 米消費者物価指数 (CPI)",
-    # --- 6月 ---
-    "2026-06-05": "🇺🇸 米雇用統計 (5月分)",
-    "2026-06-11": "🇺🇸 米消費者物価指数 (CPI)",
-    "2026-06-12": "🇯🇵 メジャーSQ (6月限)",
-    "2026-06-17": "🇺🇸 FOMC政策金利発表 (2:00)",
-    "2026-06-26": "🇯🇵 6月中間 権利付き最終日",
-    # --- 7月 ---
-    "2026-07-02": "🇺🇸 米雇用統計 (6月分)",
-    "2026-07-14": "🇺🇸 米消費者物価指数 (CPI)",
-    "2026-07-20": "🇯🇵 海の日 (休場)",
-    "2026-07-29": "🇺🇸 FOMC政策金利発表 (2:00)",
-    # --- 8月 ---
-    "2026-08-07": "🇺🇸 米雇用統計 (7月分)",
-    "2026-08-11": "🇯🇵 山の日 (休場)",
-    "2026-08-12": "🇺🇸 米消費者物価指数 (CPI)",
-    # --- 9月 ---
-    "2026-09-04": "🇺🇸 米雇用統計 (8月分)",
-    "2026-09-11": "🇯🇵 メジャーSQ (9月限) / 🇺🇸 米CPI",
-    "2026-09-16": "🇺🇸 FOMC政策金利発表 (2:00)",
-    "2026-09-21": "🇯🇵 敬老の日 (休場)",
-    "2026-09-22": "🇯🇵 国民の休日 (休場)",
-    "2026-09-23": "🇯🇵 秋分の日 (休場)",
-    "2026-09-28": "🇯🇵 9月中間 権利付き最終日",
-    # --- 10月 ---
-    "2026-10-02": "🇺🇸 米雇用統計 (9月分)",
-    "2026-10-12": "🇯🇵 スポーツの日 (休場)",
-    "2026-10-14": "🇺🇸 米消費者物価指数 (CPI)",
-    # --- 11月 ---
-    "2026-11-05": "🇺🇸 FOMC政策金利発表 (3:00) ※米冬時間",
-    "2026-11-06": "🇺🇸 米雇用統計 (10月分)",
-    "2026-11-12": "🇺🇸 米消費者物価指数 (CPI)",
-    "2026-11-23": "🇯🇵 勤労感謝の日 (休場)",
-    # --- 12月 ---
-    "2026-12-04": "🇺🇸 米雇用統計 (11月分)",
-    "2026-12-11": "🇯🇵 メジャーSQ (12月限)",
-    "2026-12-15": "🇺🇸 米消費者物価指数 (CPI)",
-    "2026-12-16": "🇺🇸 FOMC政策金利発表 (3:00)",
-    "2026-12-28": "🇯🇵 12月期末 権利付き最終日",
-    "2026-12-30": "🇯🇵 大納会",
-    "2026-12-31": "🇯🇵 年末休業 (休場)",
-}
+# =====================
+# CSVからイベントを読み込む
+# =====================
+def load_events(csv_path: Path) -> dict:
+    """
+    events.csv を読み込んで {date_str: event_str} の辞書を返す
+    CSVフォーマット: date,event
+    """
+    events = {}
+    if not csv_path.exists():
+        print(f"⚠️ events.csv が見つかりません: {csv_path}")
+        return events
 
-def send_discord_notification(message):
+    with open(csv_path, encoding="utf-8", newline="") as f:
+        reader = csv.DictReader(f)
+        for row in reader:
+            date  = row["date"].strip()
+            event = row["event"].strip()
+            if date and event:
+                events[date] = event
+
+    print(f"✅ イベント読み込み完了: {len(events)}件 ({csv_path.name})")
+    return events
+
+
+def send_discord_notification(message: str) -> None:
     payload = {"content": message}
     try:
         response = requests.post(DISCORD_WEBHOOK, json=payload)
@@ -95,24 +44,34 @@ def send_discord_notification(message):
     except Exception as e:
         print(f"Failed to send notification: {e}")
 
+
 def main():
-    # 日本時間での現在時刻を取得し、1日加算して「明日」にする
-    now_jst = datetime.now(JST)
+    # CSVはnotify.pyと同じフォルダに置く
+    csv_path = Path(__file__).parent / "events.csv"
+    ECONOMIC_EVENTS = load_events(csv_path)
+
+    # 日本時間での翌日を取得
+    now_jst      = datetime.now(JST)
     tomorrow_jst = now_jst + timedelta(days=1)
     tomorrow_str = tomorrow_jst.strftime("%Y-%m-%d")
-    
+
     event = ECONOMIC_EVENTS.get(tomorrow_str)
-    
+
     if event:
-        msg = f"[101_calendar] 🔔 **【明日】の経済イベント予定** ({tomorrow_str})\n---------------------------\n{event}"
+        msg = (
+            f"[101_calendar] 🔔 **【明日】の経済イベント予定** ({tomorrow_str})\n"
+            f"---------------------------\n"
+            f"{event}"
+        )
     else:
-        # 明日の予定がない場合
         msg = f"[101_calendar] 📅 {tomorrow_str}：明日の主要な予定はありません。"
 
     if DISCORD_WEBHOOK:
         send_discord_notification(msg)
     else:
         print("Error: DISCORD_WEBHOOK is not set.")
+        print(f"本日の確認結果: {msg}")
+
 
 if __name__ == "__main__":
     main()
